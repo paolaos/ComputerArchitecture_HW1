@@ -1,7 +1,7 @@
 /*
 * Arquitectura de Computadores
 * Tarea programada 1
-* Paola Ortega - 
+* Paola Ortega - B55204
 * Valeria Zamora - B37743
 */
 
