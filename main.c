@@ -82,6 +82,8 @@ int main(int argc,char **argv){
     int quadrant_area = 0;
     int * mat = 0;
     int * process_part = 0;
+    int * quadrants_count = 0;
+    int* results = 0
     float f0 = 0.0f, f1 = 0.0f, f2 = 0.0f;
 
     MPI_Init(&argc,&argv);
@@ -106,9 +108,11 @@ int main(int argc,char **argv){
     initial_row = (int)(initial_position / row_size);
     initial_column = initial_position % row_size;
 
+    // where the process part of the forest will be stored
     process_part = (int *)malloc((process_size)*(sizeof(int)));
 
-    printf("data %d, %d, %d\n", initial_position, initial_row, initial_column);
+    // where the quadrants count of 0's, 1's and 2's is stored
+    quadrants_count = (int *)malloc((x*3)*(sizeof(int));
 
     // Initialize forest
     if (my_id == 0){
@@ -142,6 +146,8 @@ int main(int argc,char **argv){
        // Fill the forest
         generate_forest(mat, f0, f1, f2, size);
         print_forest(mat, row_size);
+
+        results = (int *)malloc((x*3)*(sizeof(int)));
     }
 
 
@@ -154,8 +160,37 @@ int main(int argc,char **argv){
 
     // en cada index calcula en cual cuadrante esta y suma a la estructura del cuadrante correspodiente
 
-    // loop que devuelva los valores de cada uno de los cuadrantes
+    // devuelve los valores de cada uno de los cuadrantes
+    // funciona para un vector? Suma cada entrada? Para sumar cada entrada hay que hacer un ciclo?
+    MPI_Reduce(quadrants_count, results, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
+    for (int i = 0; i < (x*3); ++x) {
+        int sum = i*sizeof(int);
+        MPI_Reduce(quadrants_count + sum, (results + sum), 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+
+    // Get the percentages of each quadrant
+    int reforestable_quadrants = 0;
+    float total_0 = 0, total_1 = 0, total_2 = 0; 
+    if (my_id == 0) {
+        for (int i = 0; i < (x*3); i+3) {
+            total_0 = results[i]/p;
+            total_1 = results[i+1]/p;
+            total_2 = results[i+2]/p;
+            if (total_0 <= 0.2 && total_2 >= 0.5) {
+                reforestable_quadrants += 1;
+            }
+            
+        }
+        printf("La cantidad de cuadrantes reforestables es: %d\n", reforestable_quadrants);
+        if (reforestable_quadrants == x) {
+            printf("Se reforestara todo el bosque.\n", );
+        } else {
+            if (reforestable_quadrants/x >= 0.5) {
+                printf("La cantidad de hectareas reforestadas es mayor al 50% del bosque.\n", );
+            }
+        }
+    }
 
     // Wait
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -164,8 +199,10 @@ int main(int argc,char **argv){
     // MPI_Finalize();
     if (my_id == 0) {
         free(mat);
+        free(results);
     }
     free(process_part);
+    free(quadrants_count);
     return 0;
 }
  
