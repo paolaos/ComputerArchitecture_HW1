@@ -35,20 +35,23 @@ int greatest_common_factor(int a)
 void generate_quadrant_matrix(int* matrix, int rows_amount, int quadrants_amount, int quadrant_size) {
     int row_counter = 0;
     int column_counter = 0;
-    for (int rows = 0; rows < rows_amount; rows++){
+    int counter = 0;
+    int rows = 0, i = 0, j = 0;
+    for (rows = 0; rows < rows_amount; rows++){
         // cantidad de filas
-        for (int i = 0; i < quadrants_amount; i++) {
+        for (i = 0; i < quadrants_amount; i++) {
             // cantidad de cuadrantes
-            for (int j = 0; j < quadrant_size; j++){
+            for (j = 0; j < quadrant_size; j++){
                 // cantidad de hectareas por cuadrante
                 matrix[rows*rows_amount+(i*quadrant_size+j)] = row_counter + column_counter;
             }
             column_counter++;
         }
         column_counter = 0;
-        if (rows > 0 && rows % quadrant_size == 0)
-        {
-            row_counter+= quadrants_amount;
+        counter++;
+        if (rows > 0 && counter == quadrants_amount){
+            row_counter += quadrants_amount;
+            counter = 0;
         }
         
     }
@@ -58,7 +61,8 @@ void generate_quadrant_matrix(int* matrix, int rows_amount, int quadrants_amount
 void generate_forest(int* mat, float f0, float f1, float f2, int size) {
     srand((unsigned) time(NULL));
     float random_number = 0.0f;
-    for(int i = 0; i < size; ++i) {
+    int i = 0;
+    for(i = 0; i < size; ++i) {
         random_number = (float)rand() / RAND_MAX;
         if(random_number < f0) {
             mat[i] = 0;
@@ -74,8 +78,10 @@ void generate_forest(int* mat, float f0, float f1, float f2, int size) {
 
 void print_forest(int* mat, int column_size) {
     printf("El bosque creado es: \n");
-    for(int i = 0; i < column_size; ++i) {
-        for(int j = 0; j < column_size; ++j) {
+    int i = 0;
+    int j = 0;
+    for(i = 0; i < column_size; ++i) {
+        for(j = 0; j < column_size; ++j) {
             printf("%d ", mat[i*column_size+j]);
         }
         printf("\n");
@@ -85,6 +91,14 @@ void print_forest(int* mat, int column_size) {
 // Get quadrant number of a given position (test if this is right)
 int getQuadrant(int position, int* quadrants_matrix) {
     return quadrants_matrix[position];
+}
+
+void print_results(int* results, int size) {
+    int i = 0;
+    for (i = 0; i < size; i++) {
+        printf("%d ", results[i]);
+    }
+    printf("\n");
 }
 
 int main(int argc,char **argv){
@@ -98,6 +112,8 @@ int main(int argc,char **argv){
     int * results = 0;           // final results
     int * quadrant_matrix = 0;
     float f0 = 0.0f, f1 = 0.0f, f2 = 0.0f;
+    int i = 0;
+    int total_results_size = 0;
 
     MPI_Init(&argc,&argv);
 
@@ -112,7 +128,8 @@ int main(int argc,char **argv){
     row_size = x*p;
     size = row_size * row_size;
     process_size = size / p;
- 
+    total_results_size = total_quadrants*3;
+
     // Get my id
     MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
 
@@ -123,12 +140,14 @@ int main(int argc,char **argv){
     quadrant_matrix = (int *)malloc((size)*(sizeof(int)));
     generate_quadrant_matrix(quadrant_matrix, row_size, x, p);
 
+
     // where the process part of the forest will be stored
     process_part = (int *)malloc((process_size)*(sizeof(int)));
 
+
     // where the quadrants count of 0's, 1's and 2's is stored
-    process_results = (int *)malloc((x*3)*(sizeof(int)));
-    for(int i  = 0; i < total_quadrants*3; i++) {
+    process_results = (int *)malloc((total_results_size)*(sizeof(int)));
+    for(i  = 0; i < total_results_size; i++) {
         process_results[i] = 0;
     }
 
@@ -140,22 +159,22 @@ int main(int argc,char **argv){
         // Get distribution
         bool valid_distribution = false;
         while(!valid_distribution) {
-        printf("Ingrese la distribución que desea utilizar para generar el bosque. Los valores deben estar entre 0.0 y 1.0, los tres deben sumar 1.0\n");
+            printf("Ingrese la distribución que desea utilizar para generar el bosque. Los valores deben estar entre 0.0 y 1.0, los tres deben sumar 1.0\n");
 
-        printf("Ingrese la proporcion deseada para la categoria 0: ");
-        scanf("%f", &f0);
+            printf("Ingrese la proporcion deseada para la categoria 0: ");
+            scanf("%f", &f0);
 
-        printf("Ingrese la proporcion deseada para la categoria 1: ");
-        scanf("%f", &f1);
+            printf("Ingrese la proporcion deseada para la categoria 1: ");
+            scanf("%f", &f1);
 
-        printf("Ingrese la proporcion deseada para la categoria 2: ");
-        scanf("%f", &f2);
+            printf("Ingrese la proporcion deseada para la categoria 2: ");
+            scanf("%f", &f2);
 
-        float total = f0+f1+f2;
-        if(total == 1) {
-            valid_distribution = true;
+            float total = f0+f1+f2;
+            if(total == 1) {
+                valid_distribution = true;
+            }
         }
-    }
 
         // print general forest info
         printf("El bosque tiene %d cuadrantes y %d hectareas por cuadrante.\n", total_quadrants, quadrant_area);
@@ -165,35 +184,36 @@ int main(int argc,char **argv){
         generate_forest(mat, f0, f1, f2, size);
         print_forest(mat, row_size);
 
-        results = (int *)malloc((x*3)*(sizeof(int)));
-        for(int i  = 0; i < total_quadrants*3; i++) {
+        results = (int *)malloc(total_results_size*(sizeof(int)));
+        for(i  = 0; i < total_results_size; i++) {
             results[i] = 0;
         }
     }
 
     // Send parts to each process
-    MPI_SCATTER(mat, process_size, MPI_INT, process_part, process_size, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(mat, process_size, MPI_INT, process_part, process_size, MPI_INT, 0, MPI_COMM_WORLD);
+
 
     // Add the process part quadrants values
     int actual_quadrant = 0;
     int actual_value = 0;
-    for(int i = 0; i < process_size; i++) {
+
+    for(i = 0; i < process_size; i++) {
         actual_quadrant = getQuadrant(initial_position+i, quadrant_matrix);
         actual_value = process_part[initial_position+i];
         process_results[actual_quadrant*3+actual_value]++;
     }
+    print_results(process_results, total_results_size);
 
     // Return the values to process 0    
-    for (int i = 0; i < (x*3); ++x) {
-        int sum = i*sizeof(int);
-        MPI_Reduce(process_results + sum, (results + sum), 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    }
+    MPI_Reduce(process_results, results, total_results_size, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
     // Get the percentages of each quadrant
     int reforestable_quadrants = 0;
-    float total_0 = 0f, total_1 = 0f, total_2 = 0f; 
+    float total_0 = 0.0f, total_1 = 0.0f, total_2 = 0.0f; 
     if (my_id == 0) {
-        for (int i = 0; i < (x*3); i+=3) {
+        print_results(results, total_results_size);
+        for (i = 0; i < (x*3); i+=3) {
             total_0 = results[i]/p;
             total_1 = results[i+1]/p;
             total_2 = results[i+2]/p;
@@ -201,15 +221,12 @@ int main(int argc,char **argv){
                 reforestable_quadrants += 1;
             }
         }
-        for(int i  = 0; i < total_quadrants*3; i++) {
-            printf("%d ", results[i]);
-        }
         
         printf("La cantidad de cuadrantes reforestables es: %d\n", reforestable_quadrants);
-        if (reforestable_quadrants == x) {
+        if (reforestable_quadrants == total_quadrants) {
             printf("Se reforestara todo el bosque.\n");
         } else {
-            if (reforestable_quadrants/x >= 0.5) {
+            if (reforestable_quadrants/total_quadrants >= 0.5) {
                 printf("La cantidad de hectareas reforestadas es mayor al 0.5 del bosque.\n");
             }
         }
