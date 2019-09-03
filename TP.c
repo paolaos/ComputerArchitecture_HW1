@@ -200,34 +200,41 @@ int main(int argc,char **argv){
 
     for(i = 0; i < process_size; i++) {
         actual_quadrant = getQuadrant(initial_position+i, quadrant_matrix);
-        actual_value = process_part[initial_position+i];
+        actual_value = process_part[i];
         process_results[actual_quadrant*3+actual_value]++;
     }
-    print_results(process_results, total_results_size);
-
+    
     // Return the values to process 0    
     MPI_Reduce(process_results, results, total_results_size, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
     // Get the percentages of each quadrant
-    int reforestable_quadrants = 0;
+    float reforestable_quadrants = 0.0f;
     float total_0 = 0.0f, total_1 = 0.0f, total_2 = 0.0f; 
     if (my_id == 0) {
         print_results(results, total_results_size);
-        for (i = 0; i < (x*3); i+=3) {
-            total_0 = results[i]/p;
-            total_1 = results[i+1]/p;
-            total_2 = results[i+2]/p;
+        for (i = 0; i < total_results_size; i+=3) {
+            total_0 = (float)results[i]/(float)quadrant_area;
+            total_1 = (float)results[i+1]/(float)quadrant_area;
+            total_2 = (float)results[i+2]/(float)quadrant_area;
             if (total_0 <= 0.2 && total_2 >= 0.5) {
-                reforestable_quadrants += 1;
+                reforestable_quadrants += 1.0f;
             }
+            printf("Numero de cuadrante: %d\n", i/3);
+            printf("\tGran inversion: %f \n", total_0);
+            printf("\tAlto costo: %f \n", total_1);
+            printf("\tRazonable: %f \n", total_2);
+
         }
         
-        printf("La cantidad de cuadrantes reforestables es: %d\n", reforestable_quadrants);
+        printf("La cantidad de cuadrantes reforestables es: %f\n", reforestable_quadrants);
+        printf("El porcentaje del bosque a reforestar es: %f\n", reforestable_quadrants/(float)total_quadrants);
         if (reforestable_quadrants == total_quadrants) {
-            printf("Se reforestara todo el bosque.\n");
+            printf("Se reforestara todo el bosque, el costo es de 0.\n");
         } else {
-            if (reforestable_quadrants/total_quadrants >= 0.5) {
+            if (reforestable_quadrants/(float)total_quadrants >= 0.5) {
                 printf("La cantidad de hectareas reforestadas es mayor al 0.5 del bosque.\n");
+            } else {
+                printf("No se obtuvo beneficio en el costo de reforestar el bosque.\n");
             }
         }
     }
