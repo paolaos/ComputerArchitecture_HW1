@@ -49,7 +49,7 @@ void generate_quadrant_matrix(int* matrix, int rows_amount, int quadrants_amount
         }
         column_counter = 0;
         counter++;
-        if (rows > 0 && counter == quadrants_amount){
+        if (rows > 0 && counter == quadrant_size){
             row_counter += quadrants_amount;
             counter = 0;
         }
@@ -211,23 +211,26 @@ int main(int argc,char **argv){
     float reforestable_quadrants = 0.0f;
     float total_0 = 0.0f, total_1 = 0.0f, total_2 = 0.0f; 
     if (my_id == 0) {
-        print_results(results, total_results_size);
         for (i = 0; i < total_results_size; i+=3) {
             total_0 = (float)results[i]/(float)quadrant_area;
             total_1 = (float)results[i+1]/(float)quadrant_area;
             total_2 = (float)results[i+2]/(float)quadrant_area;
+            printf("El cuadrante %d", i/3);
             if (total_0 <= 0.2 && total_2 >= 0.5) {
                 reforestable_quadrants += 1.0f;
+                printf(" puede ser reforestado porque:\n");
+            } else {
+                printf(" no puede ser reforestado porque:\n");
             }
-            printf("Numero de cuadrante: %d\n", i/3);
+        
             printf("\tGran inversion: %f \n", total_0);
             printf("\tAlto costo: %f \n", total_1);
             printf("\tRazonable: %f \n", total_2);
 
         }
         
-        printf("La cantidad de cuadrantes reforestables es: %f\n", reforestable_quadrants);
-        printf("El porcentaje del bosque a reforestar es: %f\n", reforestable_quadrants/(float)total_quadrants);
+        printf("La cantidad de cuadrantes reforestables es: %d\n", (int)reforestable_quadrants);
+        printf("El porcentaje del bosque a reforestar es: %f\n", (reforestable_quadrants/(float)total_quadrants)*100.0f);
         if (reforestable_quadrants == total_quadrants) {
             printf("Se reforestara todo el bosque, el costo es de 0.\n");
         } else {
